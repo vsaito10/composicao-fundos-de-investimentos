@@ -14,4 +14,5 @@ Os fundos de investimentos que foram analisados:
 - Verde AM Long Bias Master;
 - Dynamo Cougar Master FIA;
 - IP Participações Master FIA BDR Nível I;
-- Squadra Master Long Biased FIA.
+- Squadra Master Long Biased FIA;
+- Guepardo Institucional Master FIA.
