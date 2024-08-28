@@ -1,6 +1,12 @@
+from functools import reduce
 from plotly.subplots import make_subplots
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import seaborn as sns
+import yfinance as yf
+
 
 def rentabilidade_fundo(df: pd.DataFrame, cnpj: str, nome_fundo: str):
     """
@@ -8,7 +14,7 @@ def rentabilidade_fundo(df: pd.DataFrame, cnpj: str, nome_fundo: str):
 
     Parameters:
     df: Dataframe que contem as cotas dos fundos.
-    cnpj: cnpj do fundo de investimento que você está procurando.
+    cnpj: cnpj do fundo de investimento.
     nome_fundo: nome do fundo.
 
     Returns:
@@ -73,6 +79,8 @@ def rentabilidade_fundo_benchmark(
         nome_benchmark: str
     ) -> pd.DataFrame:
     """
+    Calcula a rentabiliade do fundo selecionado.
+
     Parameters:
     df_fundo: Dataframe de rentabilidade do fundo.
     df_benchmark: Dataframe de rentabilidade do benchmark.
@@ -93,10 +101,10 @@ def rentabilidade_fundo_benchmark(
 
 def open_cda_1(path: str) -> pd.DataFrame:
     """
-    Formatando o arquivo 'cda_fi_BLC_1'.
+    Formata o arquivo 'cda_fi_BLC_1'.
 
     Parameters:
-    path: caminho do arquivo.
+    path: caminho do arquivo 'open_cda_1'.
 
     Returns:
     Dataframe do arquivo 'cda_fi_BLC_1'
@@ -135,10 +143,10 @@ def open_cda_1(path: str) -> pd.DataFrame:
 
 def open_cda_2(path: str) -> pd.DataFrame:
     """
-    Formatando o arquivo 'cda_fi_BLC_2'.
+    Formata o arquivo 'cda_fi_BLC_2'.
 
     Parameters:
-    path: caminho do arquivo.
+    path: caminho do arquivo 'open_cda_2'.
 
     Returns:
     Dataframe do arquivo 'cda_fi_BLC_2'
@@ -171,10 +179,10 @@ def open_cda_2(path: str) -> pd.DataFrame:
 
 def open_cda_4(path: str) -> pd.DataFrame:
     """
-    Formatando o arquivo 'cda_fi_BLC_4'.
+    Formata o arquivo 'cda_fi_BLC_4'.
 
     Parameters:
-    path: caminho do arquivo.
+    path: caminho do arquivo 'open_cda_4'.
 
     Returns:
     Dataframe do arquivo 'cda_fi_BLC_4'
@@ -204,10 +212,10 @@ def open_cda_4(path: str) -> pd.DataFrame:
 
 def open_cda_7(path: str) -> pd.DataFrame:
     """
-    Formatando o arquivo 'cda_fi_BLC_7'.
+    Formata o arquivo 'cda_fi_BLC_7'.
 
     Parameters:
-    path: caminho do arquivo.
+    path: caminho do arquivo 'cda_fi_BLC_7'.
 
     Returns:
     Dataframe do arquivo 'cda_fi_BLC_7'
@@ -240,10 +248,10 @@ def open_cda_7(path: str) -> pd.DataFrame:
 
 def open_cda_8(path: str) -> pd.DataFrame:
     """
-    Formatando o arquivo 'cda_fi_BLC_8'.
+    Formata o arquivo 'cda_fi_BLC_8'.
 
     Parameters:
-    path: caminho do arquivo.
+    path: caminho do arquivo 'cda_fi_BLC_8'.
 
     Returns:
     Dataframe do arquivo 'cda_fi_BLC_8'
@@ -280,11 +288,11 @@ def open_cda_8(path: str) -> pd.DataFrame:
 
 def pl_fundo(path: str, cnpj: str) -> pd.DataFrame:
     """
-    Formatando o arquivo 'cda_fi_PL'.
+    Formata o arquivo 'cda_fi_PL'.
     
     Paramenters:
-    path: caminho do arquivo.
-    cnpj: cnpj do fundo de investimento que você está procurando.
+    path: caminho do arquivo 'cda_fi_PL'.
+    cnpj: cnpj do fundo de investimento.
 
     Returns:
     Dataframe com o valor do patrimônio líquido do fundo de investimentos específico.
@@ -312,7 +320,7 @@ def fundo_cnpj(df: pd.DataFrame, cnpj: str) -> pd.DataFrame:
 
     Parameters:
     df: Dataframe que contém os ativos dos fundos.
-    cnpj: cnpj do fundo de investimento que você está procurando.
+    cnpj: cnpj do fundo de investimento.
 
     Returns:
     Vários dataframes de categorias diferentes: ações, BDRs, investimentos no exterior, cotas de fundos e títulos públicos.
@@ -403,11 +411,10 @@ def fundo_cnpj_acoes(df: pd.DataFrame, cnpj: str) -> pd.DataFrame:
 
     Parameters:
     df: Dataframe que contém os ativos dos fundos.
-    cnpj: cnpj do fundo de investimento que você está procurando.
+    cnpj: cnpj do fundo de investimento.
 
     Returns:
     Dataframe das ações do fundo selecionado.
-    
     """
     # Lendo o df concatenado
     filt_cnpj = df['CNPJ_FUNDO'] == cnpj
@@ -433,11 +440,10 @@ def fundo_cnpj_debentures(df: pd.DataFrame, cnpj: str) -> pd.DataFrame:
 
     Parameters:
     df: Dataframe que contém os ativos dos fundos.
-    cnpj: cnpj do fundo de investimento que você está procurando.
+    cnpj: cnpj do fundo de investimento.
 
     Returns:
     Dataframe das debêntures do fundo selecionado.
-    
     """
     # Lendo o df concatenado
     filt_cnpj = df['CNPJ_FUNDO'] == cnpj
@@ -489,6 +495,8 @@ def comparar_portfolios(df: pd.DataFrame, nome_fundo: str) -> str:
 
 def num_total_acoes(df: pd.DataFrame) -> pd.Series:
     """
+    Mostra o número total do portfólio do fundo.
+
     Parameters:
     df: DataFrame do portfólio do fundo.
 
@@ -502,6 +510,8 @@ def num_total_acoes(df: pd.DataFrame) -> pd.Series:
 
 def rank_top_5(df: pd.DataFrame) -> pd.Series:
     """
+    Mostra o rank das 5 maiores posições do fundo.
+
     Parameters:
     df: DataFrame do portfólio do fundo.
     
@@ -526,6 +536,8 @@ def rank_top_5(df: pd.DataFrame) -> pd.Series:
 
 def plot_portfolio(df: pd.DataFrame, nome_fundo: str):
     """
+    Faz o plot do portfólio do fundo.
+
     Parameters:
     df: Dataframe do portfólio do fundo selecionado.
     nome_fundo: nome do fundo.
@@ -565,3 +577,489 @@ def plot_portfolio(df: pd.DataFrame, nome_fundo: str):
     )
 
     return fig.show()
+
+
+def open_arquivos_fii(fii_ativo_passivo_path: str, fii_complemento_path: str, fii_geral_path: str) -> pd.DataFrame:
+    """
+    Formata e compila os arquivos mensais dos FIIs.
+
+    Parameters:
+    fii_ativo_passivo_path: caminho do arquivo "inf_mensal_fii_ativo_passivo_XXXX".
+    fii_complemento_path: caminho do arquivo "inf_mensal_fii_complemento_XXXX".
+    fii_geral_path: caminho do arquivo "inf_mensal_fii_geral_XXXX".
+
+    Returns:
+    df_fii: df com os principais dados sobre os FIIs.
+    """
+    # Lendo os arquivos parquet
+    df_ativo_passivo = pd.read_parquet(fii_ativo_passivo_path)
+    df_complemento = pd.read_parquet(fii_complemento_path)
+    df_geral = pd.read_parquet(fii_geral_path)
+
+    # Selecionando as principais colunas e transformando a coluna 'Data_Referencia' em datetime
+    df_ativo_passivo = df_ativo_passivo[[
+        'Data_Referencia', 
+        'CNPJ_Fundo', 
+        'Obrigacoes_Aquisicao_Imoveis', 
+        'Obrigacoes_Securitizacao_Recebiveis'
+    ]]
+
+    df_complemento = df_complemento[[
+        'Data_Referencia', 
+        'CNPJ_Fundo', 
+        'Valor_Ativo', 
+        'Patrimonio_Liquido', 
+        'Cotas_Emitidas', 
+        'Valor_Patrimonial_Cotas',
+        'Percentual_Rentabilidade_Efetiva_Mes',
+        'Percentual_Dividend_Yield_Mes'
+    ]]
+
+    df_geral = df_geral[[
+        'Data_Referencia',
+        'CNPJ_Fundo', 
+        'Segmento_Atuacao'
+    ]]
+
+    # Arrumando a escala das colunas
+    df_complemento['Percentual_Rentabilidade_Efetiva_Mes'] = round(df_complemento['Percentual_Rentabilidade_Efetiva_Mes'] * 100, 2)
+    df_complemento['Percentual_Dividend_Yield_Mes'] = round(df_complemento['Percentual_Dividend_Yield_Mes'] * 100, 2)
+
+    # Transformando em datetime
+    df_ativo_passivo['Data_Referencia'] = pd.to_datetime(df_ativo_passivo['Data_Referencia'], format='%Y-%m-%d')
+    df_complemento['Data_Referencia'] = pd.to_datetime(df_complemento['Data_Referencia'], format='%Y-%m-%d')
+    df_geral['Data_Referencia'] = pd.to_datetime(df_geral['Data_Referencia'], format='%Y-%m-%d')
+
+    # Verificando se há espaços em branco ou discrepâncias nas colunas de junção
+    df_ativo_passivo['CNPJ_Fundo'] = df_ativo_passivo['CNPJ_Fundo'].str.strip()
+    df_complemento['CNPJ_Fundo'] = df_complemento['CNPJ_Fundo'].str.strip()
+    df_geral['CNPJ_Fundo'] = df_geral['CNPJ_Fundo'].str.strip()
+
+    # Lista dos dfs que vão ser mesclados
+    lst_dfs = [df_ativo_passivo, df_complemento, df_geral]
+    
+    # Mesclando os dataframes
+    df_fii = reduce(lambda left, right: pd.merge(left, right, on=['CNPJ_Fundo', 'Data_Referencia']), lst_dfs)
+
+    # Calculando a dívida total
+    df_fii['Divida_Total'] = df_fii['Obrigacoes_Aquisicao_Imoveis'] + df_fii['Obrigacoes_Securitizacao_Recebiveis']
+
+    # Calculando o grau de alavancagem
+    df_fii['Grau_Alavancagem'] = (df_fii['Divida_Total'] / df_fii['Valor_Ativo']) * 100
+
+    # Preenchendo os NaN com zero
+    df_fii = df_fii.fillna(0)
+
+    return df_fii
+
+
+def fii_cnpj(df: pd.DataFrame, cnpj: str, ticker: str) -> pd.DataFrame:
+    """
+    Mostra os principais indicadores do FII selecionado.
+
+    Parameters:
+    df: df que contém todos os FIIs
+    cnpj: cnpj do FII selecionado.
+    ticker: ticker do FII selecionado.
+
+    Returns:
+    df_fii_final: df do FII selecionado com os seus principais indicadores.
+    """
+    # Selecionando um FII específico
+    filt = df['CNPJ_Fundo'] == cnpj
+    df_fii_espec = df.loc[filt]
+
+    # Primeiro Ano
+    primeiro_ano = df.index[0].year
+    # Primeiro mês
+    primeiro_mes = df.index[0].month
+    # Último Ano
+    ultimo_ano = df.index[-1].year
+    # Último mês
+    ultimo_mes = df.index[-1].month
+
+    # Fazendo o download dos preço do FII
+    fii_preco = yf.download(ticker, start=f'{primeiro_ano}-{primeiro_mes}-01', end=f'{ultimo_ano}-{ultimo_mes+1}-01')['Close']
+    # Renomeando o nome do index 
+    fii_preco = fii_preco.rename_axis('Data_Referencia')
+    # Usando o resample para agrupar por mês e selecionando o último valor de cada mês
+    fii_preco = fii_preco.resample('M').last()
+    # Transformando os dias do index para 01 p/ juntar com o 'df_ifix'
+    new_index = fii_preco.index.to_period('M').to_timestamp() + pd.offsets.Day(0)
+    # Index novo em que o dia é 01
+    fii_preco.index = new_index
+    # Cortando o df para ficar no mesmo tamanho do 'df_ifix'
+    fii_preco = fii_preco.loc[:f'{ultimo_ano}-{ultimo_mes}']
+
+    # Juntando os dfs
+    df_fii_final = pd.merge(fii_preco, df_fii_espec, left_index=True, right_index=True)
+
+    # Calculando o P/VP
+    df_fii_final['P/VP'] = round(df_fii_final['Close'] / df_fii_final['Valor_Patrimonial_Cotas'], 2)
+
+    return df_fii_final
+
+
+def filtro_etf(path: str) -> pd.DataFrame:
+  """
+  Função que filtra a composição da carteira do ETF (IBOV e SMAL11).
+
+  Parameters:
+  path: caminho do arquivo do ETF.
+  
+  Returns:
+  DataFrame do ETF.
+  """
+  # Abrindo arquivo Ibovespa (carteira teórica)
+  df = pd.read_csv(path, 
+                   sep=';',
+                   encoding='ISO-8859-1', 
+                   engine='python', 
+                   header=1, #cabeçalho vira a 2º linha da tabela
+                   skipfooter=2, #pula as duas últimas linhas da tabela
+                   index_col=False)
+  
+  # Convertendo o dtypes das colunas
+  df['Código'] = df['Código'].astype(str)
+  df['Ação'] = df['Ação'].astype(str)
+  df['Tipo'] = df['Tipo'].astype(str)
+  df['Qtde. Teórica'] = df['Qtde. Teórica'].str.replace('.', '', regex=False)
+  df['Qtde. Teórica'] = df['Qtde. Teórica'].astype(float)
+  df['Part. (%)'] = df['Part. (%)'].str.replace(',', '.', regex=False)
+  df['Part. (%)'] = df['Part. (%)'].astype(float)
+
+  return df
+
+
+def vol_anual(ticker: str, ano: str) -> pd.Series:
+    """
+    Função que calcula a volatilidade anualizada.
+
+    Parameters:
+    ticker: ticker da empresa.
+    ano: período escolhido.
+
+    Returns:
+    annualized_volatility : volatilidade anualiazada.
+
+    NOTE: para calcular a vol mensal trocar apenas o np.sqrt(12).
+    NOTE: para calcular a vol semanal trocar apenas o np.sqrt(52).
+    """
+    # Preço de fechamento do ativo
+    df_preco = yf.download(ticker)['Close']
+
+    # Calculando o retorno logarítmico
+    log_return = np.log(df_preco.loc[ano, ticker] / df_preco.loc[ano, ticker].shift(1))
+
+    # Calculando a volatilidade anualizada
+    annualized_volatility = round((np.std(log_return) * np.sqrt(252)) * 100, 2)
+
+    return annualized_volatility 
+
+
+def drawdown(ticker: str) -> pd.Series:
+    """
+    Função que calcula drawdown.
+
+    Parameters:
+    ticker: ticker da empresa.
+
+    Returns:
+    Ponto mínimo do drawdown.
+    """
+    # Df do preço do ativo
+    df_preco = yf.download(ticker)['Close']
+
+    # Calculando o retorno diário
+    df_returns = df_preco.pct_change().dropna()
+
+    # Calculando o retorno acumulado
+    cumulative_returns = (1+df_returns).cumprod()
+
+    # Calculando o pico
+    peak = cumulative_returns.expanding(min_periods=1).max()
+
+    # Calculando o drawdown
+    drawdown = round(((cumulative_returns / peak) - 1) * 100, 2)
+
+    return drawdown.min()
+
+
+def ret_acumulado(ticker: str, setor: str):
+    """
+    Parameters:
+    ticker: ticker do ativo.
+    setor: nome do setor.
+
+    Return:
+    Plot do retorno acumulado do(s) ativo(s).
+    """
+    # Df do preço do ativo
+    df_preco = yf.download(ticker)['Close']
+
+    # Calculando o retorno diário
+    df_returns = df_preco.pct_change().dropna()
+
+    # Calculando o retorno acumulado
+    ret_accum = (1 + df_returns).cumprod()
+
+    # Primeiro dia começa em 1
+    ret_accum.iloc[0] = 1
+
+    # Plotando o retorno acumulado
+    fig = go.Figure()
+
+    for empresa in ret_accum:
+        fig.add_trace(go.Scatter(
+            x=ret_accum.index,
+            y=ret_accum[empresa],
+            name=empresa
+        ))
+
+    fig.update_layout(
+        height=800,
+        title_text=f'Retorno Acumulado - Setor de {setor}',
+        template='seaborn'
+    )
+
+    fig.add_hline(y=1, line_width=1, line_color='red')
+
+    return fig.show()
+
+
+def ret_anual(ticker:str, setor: str):
+    """
+    Parameters:
+    ticker: ticker do ativo.
+    setor: nome do setor.
+
+    Return:
+    Plot do retorno anual do(s) ativo(s).
+    """
+    # Download dos preços do ativo
+    df_preco = yf.download(ticker)['Close']
+
+    # Ano atual para calcular o retorno do ano anterior
+    ano_atual = 2024
+
+    # Calculando o retorno anual
+    lst_ret_anual = []
+    for empresa in df_preco.columns:
+        ret_anual = [round(((df_preco.loc[f'{ano}-12', empresa][-1] / df_preco.loc[f'{ano}-01', empresa][0])-1)*100, 2) for ano in range(df_preco.index[0].year+1, ano_atual)]
+        lst_ret_anual.append(ret_anual)
+
+    # Lista dos anos negociados p/ se tornar o index do df
+    lista_anos_idx = [ano for ano in range(df_preco.index[0].year+1, ano_atual)]
+
+    # Criando o df 
+    df_ret_anual = pd.DataFrame(lst_ret_anual).T
+    df_ret_anual.columns =df_preco.columns
+    df_ret_anual.index = lista_anos_idx
+
+    # Plotando o retorno anual em um heatmap
+    plt.figure(figsize=(20, 10))
+    sns.heatmap(df_ret_anual, annot=True, cmap='Blues', fmt=".2f", linewidths=0.8)
+    plt.title(f'Retorno Anual - Setor de {setor}')
+
+    return plt, df_ret_anual
+
+
+def plot_risk_return(ticker: str, setor: str):
+    """
+    Parameters:
+    df_setor: df que contém os preços de fechamento das empresas do setor selecionado.
+    setor: nome do setor.
+    
+    Returns:
+    Plot do gráfico da relação risco x retorno do setor selecionado.
+    """
+
+    # Df do preço do ativo
+    df_preco = yf.download(ticker)['Close']
+
+    # Calculando o retorno diário
+    df_returns = np.log(df_preco / df_preco.shift(1))
+
+    # Listas da média do retorno logarítmico e do desvio-padrão do retorno logarítmico
+    lst_ret_mean = []
+    lst_ret_std = []
+
+    for empresa in df_returns:
+        # Média do retorno logarítmico
+        ret_mean = df_returns[empresa].dropna().mean() * 100
+        # Desvio-padrão do retorno logarítmico médio
+        ret_std = df_returns[empresa].dropna().std() * 100
+        lst_ret_mean.append(ret_mean)
+        lst_ret_std.append(ret_std)
+
+    # Dataframe da relação risco x retorno
+    df_risk_return = pd.DataFrame([lst_ret_mean, lst_ret_std], columns=df_returns.columns, index=['mean', 'std'])
+
+    # Plotando o grafico da relação risco x retorno
+    fig = go.Figure()
+
+    for empresa in df_risk_return: 
+        fig.add_trace(go.Scatter(
+            x=[df_risk_return.loc['mean', empresa]],
+            y=[df_risk_return.loc['std', empresa]],
+            mode='markers',
+            marker=dict(symbol='star', size=10),
+            name=empresa
+        ))
+
+    # Atualizando o layout
+    fig.update_layout(
+        title=f'Setor de {setor} - Gráfico risco x retorno',
+        xaxis=dict(title='Média Esperada Retorno Diário'),
+        yaxis=dict(title='Risco Diário'),
+        showlegend=True
+    )
+
+    fig.add_hline(y=0, line_width=2, line_color='red')
+    fig.add_vline(x=0, line_width=2, line_color='red')
+
+    return fig.show()
+
+
+def dy_acumm_12m(df: pd.DataFrame) -> pd.Series:
+    """
+    Calcula o dividend yield acumulado dos últimos 12 meses.
+
+    Parameters:
+    df: df do FII que contém a coluna 'Percentual_Dividend_Yield_Mes'.
+
+    Returns:
+    dy_acumulado: dividend yield acumulado dos últimos 12 meses.
+    """
+    # Calculando a taxa unitária
+    taxa_unitaria = 1 + (df['Percentual_Dividend_Yield_Mes'] / 100)
+
+    # Calculando o DY acumulado dos últimos 12 meses
+    dy_acumulado = round((taxa_unitaria.rolling(window=12).agg(lambda x: x.prod()) - 1) * 100, 2)
+
+    # Retirando os NaN
+    dy_acumulado = dy_acumulado.dropna()
+
+    return dy_acumulado
+
+
+def consulta_bc(codigo_bcb: str):
+    """
+    Parameters:
+    codigo_bcb: código da série do BC.
+
+    Returns:
+    df: Dataframe da série do BC.
+    """
+    url = f'http://api.bcb.gov.br/dados/serie/bcdata.sgs.{codigo_bcb}/dados?formato=json'
+    df = pd.read_json(url)
+    df['data'] = pd.to_datetime(df['data'], dayfirst=True)
+    df.set_index('data', inplace= True)
+
+    return df
+
+
+def vm_igti(ano: str, mes: str, num_on: int, num_pn: int):
+    """
+    Calcula o valor de mercado da empresa Iguatemi (IGTI3 e IGTI4).
+
+    Parameters:
+    ano: ano do período do ITR/DFP.
+    mes: mes do período do ITR/DFP.
+    num_on: número de ações ordinárias do período do ITR/DFP.
+    num_pn: número de ações preferenciais do período do ITR/DFP.
+
+    Returns:
+    igti_vm: valor de mercado da Iguatemi.
+
+    """
+    # Selecioando os últimos preços do IGTI
+    # ITR 1T -> mes: '03'
+    # ITR 2T -> mes: '06'
+    # ITR 3T -> mes: '09'
+    # DFP 4T -> mes: '12'
+    lst_iguatemi = ['IGTI3.SA', 'IGTI4.SA']
+    preco_iguatemi = yf.download(lst_iguatemi)['Adj Close']
+    preco_iguatemi = preco_iguatemi.loc[f'{ano}-{mes}']
+    preco_iguatemi = preco_iguatemi.iloc[-1]
+
+    # Número de ações do IGTI
+    dict_num_acoes_igti = {
+        'on': num_on,
+        'pn': num_pn
+    }
+
+    # Valor de mercado do IGTI
+    igti3_vm = preco_iguatemi['IGTI3.SA'] * dict_num_acoes_igti['on']
+    igti4_vm = preco_iguatemi['IGTI4.SA'] * dict_num_acoes_igti['pn']
+    igti_vm = igti3_vm + igti4_vm
+
+    return igti_vm
+
+
+def indicadores_acoes_shoppings(ano: str, mes: str, dict_shoppings: dict, ticker: str, vm_igti):
+    """
+    Parameters:
+    ano: ano do período do ITR/DFP.
+    mes: mes do período do ITR/DFP.
+    dict_shoppings: dicionário que contém os dados das empresas de shoppings.
+    ticker: tickers das empreas de shoppings.
+    vm_igti: função que calcula o valor de mercado da Iguatemi.
+
+    Returns:
+    df_acoes_shoppings: df que contém o indicador P/VP das empresas de shoppings.
+    """
+
+    # Selecionando os últimos preços das ações de shoppings
+    # ITR 1T -> mes: '03'
+    # ITR 2T -> mes: '06'
+    # ITR 3T -> mes: '09'
+    # DFP 4T -> mes: '12'
+    preco_shopping = yf.download(ticker)['Adj Close']
+    preco_shopping = preco_shopping.loc[f'{ano}-{mes}']
+    ultimo_preco_shopping = preco_shopping.iloc[-1]
+    ultimo_preco_shopping = ultimo_preco_shopping.rename('preco')
+
+    # Transformando em um df
+    df_acoes_shoppings = pd.DataFrame(dict_shoppings, index=ticker)
+
+    # Concatenando os dfs
+    df_acoes_shoppings = pd.concat([df_acoes_shoppings, ultimo_preco_shopping], axis=1)
+
+    # Calculando a diferença entre o 'valor_justo' e 'propriedades_investimentos'
+    df_acoes_shoppings['diferenca'] = df_acoes_shoppings['valor_justo'] - df_acoes_shoppings['propriedades_investimento']
+    # Calculando o 'pl_ajustado'
+    df_acoes_shoppings['pl_ajustado'] = df_acoes_shoppings['pl_contabil'] + df_acoes_shoppings['diferenca']
+    # Calculando o 'vpa'
+    df_acoes_shoppings['vpa'] = round(df_acoes_shoppings['pl_ajustado'] / df_acoes_shoppings['num_acoes'], 2)
+    # Calculando o 'p/vp'
+    df_acoes_shoppings['p/vp'] = round(df_acoes_shoppings['preco'] / df_acoes_shoppings['vpa'], 2)
+    # A unit da Iguatemi é formada por 3 ações (1 Unit = 1 ação ON + 2 ações PN)
+    df_acoes_shoppings.loc['IGTI11.SA', 'p/vp'] = df_acoes_shoppings.loc['IGTI11.SA', 'p/vp']/3
+    # Calculando o 'valor_mercado'
+    df_acoes_shoppings['valor_mercado'] = df_acoes_shoppings['num_acoes'] * df_acoes_shoppings['preco']
+    # Calculando o 'valor_mercado' do IGTI com os valores de ON e PN
+    vm_igti_2T24 = vm_igti
+    # Substituindo o 'valor_mercado' do IGTI11 pelo correto
+    df_acoes_shoppings.loc['IGTI11.SA', 'valor_mercado'] = vm_igti_2T24
+    # Calculando o 'enterprise_value'
+    df_acoes_shoppings['enterprise_value'] = df_acoes_shoppings['valor_mercado'] + df_acoes_shoppings['divida_liquida'] 
+    # Calculando 'ev_abl' (EV/m²)
+    df_acoes_shoppings['ev_abl'] =  round(df_acoes_shoppings['enterprise_value'] / df_acoes_shoppings['abl_propria'], 2)
+
+    return df_acoes_shoppings
+
+
+def valor_absoluto_grafico_pizza(val: float, contagem: pd.Series) -> str:
+    """
+    Mostra os valores absolutos de uma contagem específica para ser plotado no gráfico de pizza.
+
+    Parameters:
+    val: o valor percentual a ser convertido em um valor absoluto.
+    contagem: a série de contagem que será usada como base para o cálculo.
+
+    Returns:
+    str: o valor absoluto como uma string, adequado para ser exibido em gráficos.
+    """
+    a = int(val / 100. * contagem.sum())
+    return f'{a}'
