@@ -700,6 +700,32 @@ def fii_cnpj(df: pd.DataFrame, cnpj: str, ticker: str) -> pd.DataFrame:
     return df_fii_final
 
 
+def plot_historico_p_vp(df: pd.DataFrame, nome_segmento: str):
+    """
+    Parameters:
+    df:  df do FII que contém a coluna 'P/VP'.
+    nome_segmento: nome do segmento do FII.
+
+    Returns:
+    Plot do histórico do indicador P/VP dos FIIs.
+    """
+    # Plotando o histórico do indicador P/VP dos FIIs
+    fig = go.Figure()
+
+    for empresa in df['Ticker'].unique():
+        fig.add_trace(go.Scatter(
+                x=df.loc[df['Ticker'] == empresa].index,
+                y=df.loc[df['Ticker'] == empresa, 'P/VP'],
+                name=empresa
+            ))
+
+    fig.add_hline(y=1, line_color='red', line_width=0.5)
+
+    fig.update_layout(title=f'Histórico do P/VP dos FIIs de {nome_segmento}')
+
+    fig.show()
+
+
 def filtro_etf(path: str) -> pd.DataFrame:
   """
   Função que filtra a composição da carteira do ETF (IBOV e SMAL11).
@@ -785,11 +811,12 @@ def drawdown(ticker: str) -> pd.Series:
     return drawdown.min()
 
 
-def ret_acumulado(ticker: str, setor: str):
+def ret_acumulado(ticker: str, setor: str, df_benchmark: pd.DataFrame):
     """
     Parameters:
     ticker: ticker do ativo.
     setor: nome do setor.
+    df_benchmark: df com os preços de fechamento ('Close') e variação percentual ('pct_change') do benchmark.
 
     Return:
     Plot do retorno acumulado do(s) ativo(s).
@@ -799,12 +826,17 @@ def ret_acumulado(ticker: str, setor: str):
 
     # Calculando o retorno diário
     df_returns = df_preco.pct_change().dropna()
-
     # Calculando o retorno acumulado
     ret_accum = (1 + df_returns).cumprod()
-
     # Primeiro dia começa em 1
     ret_accum.iloc[0] = 1
+
+    # Selecionando o mesmo período dos FIIs para o df do benchmark
+    benchmark_precos_sliced = df_benchmark.loc[ret_accum.index[0]:, ['Close', 'pct_change']]
+    # Calculando a variação percentual acumulada
+    benchmark_precos_sliced['pct_change_accum'] = round((1 + (benchmark_precos_sliced['pct_change']/100)).cumprod(), 4) 
+    # Primeiro dia começa em 1
+    benchmark_precos_sliced['pct_change_accum'].iloc[0] = 1
 
     # Plotando o retorno acumulado
     fig = go.Figure()
@@ -816,6 +848,12 @@ def ret_acumulado(ticker: str, setor: str):
             name=empresa
         ))
 
+    fig.add_trace(go.Scatter(
+        x=benchmark_precos_sliced.index,
+        y=benchmark_precos_sliced['pct_change_accum'],
+        name='IFIX'
+    ))
+
     fig.update_layout(
         height=800,
         title_text=f'Retorno Acumulado - Setor de {setor}',
@@ -824,14 +862,15 @@ def ret_acumulado(ticker: str, setor: str):
 
     fig.add_hline(y=1, line_width=1, line_color='red')
 
-    return fig.show()
+    return ret_accum, fig.show()
 
 
-def ret_anual(ticker:str, setor: str):
+def ret_anual(ticker:str, setor: str, df_benchmark: pd.DataFrame):
     """
     Parameters:
     ticker: ticker do ativo.
     setor: nome do setor.
+    df_benchmark: df com os preços de fechamento ('Close') do benchmark.
 
     Return:
     Plot do retorno anual do(s) ativo(s).
@@ -856,12 +895,26 @@ def ret_anual(ticker:str, setor: str):
     df_ret_anual.columns =df_preco.columns
     df_ret_anual.index = lista_anos_idx
 
+    # Calculando o retorno anual do IFIX
+    ret_anual_ifix = [round(((df_benchmark.loc[f'{ano}-12', 'Close'][-1] / df_benchmark.loc[f'{ano}-01', 'Close'][0]) - 1) * 100, 2) for ano in df_benchmark.index.year.unique()[:-1]]
+    # Lista dos anos negociados p/ se tornar o index do df
+    lista_anos_idx_ifix = [ano for ano in df_benchmark.index.year.unique()[:-1]]
+    # Criando o df do benchmark
+    df_ret_anual_ifix = pd.DataFrame(ret_anual_ifix, index=lista_anos_idx_ifix)
+    # Renomeando a coluna
+    df_ret_anual_ifix = df_ret_anual_ifix.rename(columns={0:'IFIX'})
+    # Cortando o df do benchmark p/ ficar do mesmo tamanho do df dos FIIs
+    df_ret_anual_ifix = df_ret_anual_ifix.loc[df_preco.index[0].year+1:]
+
+    # Concatenando os dfs
+    df_ret_anual = pd.concat([df_ret_anual, df_ret_anual_ifix], axis=1)
+
     # Plotando o retorno anual em um heatmap
     plt.figure(figsize=(20, 10))
     sns.heatmap(df_ret_anual, annot=True, cmap='Blues', fmt=".2f", linewidths=0.8)
     plt.title(f'Retorno Anual - Setor de {setor}')
 
-    return plt, df_ret_anual
+    return df_ret_anual, plt
 
 
 def plot_risk_return(ticker: str, setor: str):
@@ -921,26 +974,69 @@ def plot_risk_return(ticker: str, setor: str):
     return fig.show()
 
 
-def dy_acumm_12m(df: pd.DataFrame) -> pd.Series:
+def dy_fii(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calcula o DY médio, máximo e mínimo do FII.
+
+    Parameters:
+    df: dataframe do FII que contém a coluna 'Percentual_Dividend_Yield_Mes'.
+
+    Returns:
+    df_dy: dataframe que contém os DY médio, máximo e mínimo.
+    """
+
+    # Calculando o DY médio, máximo e mínimo
+    lst_dy = []
+
+    for empresa in df['Ticker'].unique():
+        dy_medio = round(df.loc[df['Ticker'] == empresa, 'Percentual_Dividend_Yield_Mes'].mean(), 2)
+        dy_max = round(df.loc[df['Ticker'] == empresa, 'Percentual_Dividend_Yield_Mes'].max(), 2)
+        dy_min = round(df.loc[df['Ticker'] == empresa, 'Percentual_Dividend_Yield_Mes'].min(), 2)
+        lst_dy.append({
+            'dy_medio': dy_medio, 
+            'dy_max': dy_max, 
+            'dy_min': dy_min
+        })
+
+    # Transformando a lista em um df
+    df_dy = pd.DataFrame(lst_dy)
+
+    # Renomeando as colunas
+    df_dy.index = df['Ticker'].unique()
+
+    return df_dy
+
+
+def dy_fii_acumm_12m(df: pd.DataFrame) -> pd.Series:
     """
     Calcula o dividend yield acumulado dos últimos 12 meses.
 
     Parameters:
-    df: df do FII que contém a coluna 'Percentual_Dividend_Yield_Mes'.
+    df: dataframe do FII que contém a coluna 'Percentual_Dividend_Yield_Mes'.
 
     Returns:
     dy_acumulado: dividend yield acumulado dos últimos 12 meses.
     """
-    # Calculando a taxa unitária
-    taxa_unitaria = 1 + (df['Percentual_Dividend_Yield_Mes'] / 100)
 
-    # Calculando o DY acumulado dos últimos 12 meses
-    dy_acumulado = round((taxa_unitaria.rolling(window=12).agg(lambda x: x.prod()) - 1) * 100, 2)
+    # DY acumulado dos últimos 12 meses
+    lst_dy_accum = []
+    for empresa in df['Ticker'].unique():
+        # Calculando a taxa unitária
+        taxa_unitaria = 1 + (df.loc[df['Ticker'] == empresa, 'Percentual_Dividend_Yield_Mes'] / 100)
+        # Calculando o DY acumulado dos últimos 12 meses
+        dy_acumulado = round((taxa_unitaria.rolling(window=12).agg(lambda x: x.prod()) - 1) * 100, 2)
+        # Retirando os NaN
+        dy_acumulado = dy_acumulado.dropna()
+        # Adicionando na lista
+        lst_dy_accum.append(dy_acumulado)
 
-    # Retirando os NaN
-    dy_acumulado = dy_acumulado.dropna()
+    # Criando o df
+    df_dy_accum = pd.DataFrame(lst_dy_accum).T
 
-    return dy_acumulado
+    # Renomeando as colunas
+    df_dy_accum.columns = df['Ticker'].unique()
+
+    return df_dy_accum
 
 
 def consulta_bc(codigo_bcb: str):
