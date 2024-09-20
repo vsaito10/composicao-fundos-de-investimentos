@@ -279,9 +279,9 @@ def open_cda_8(path: str) -> pd.DataFrame:
     df['VL_MERC_POS_FINAL'] = df.loc[:, 'VL_MERC_POS_FINAL'].astype(float)
     df['CD_ATIVO'] = df.loc[:, 'CD_ATIVO'].astype(str)
 
-    # Selecionando apenas o ativo 'BDR', porque neste arquivo também possui um ativo chamado 'Títulos Públicos', mas não é o principal 'Títulos Públicos', que está no 'cda_fi_BLC_1'
-    filt_bdr = (df['TP_APLIC'] == 'Brazilian Depository Receipt - BDR')
-    df = df.loc[filt_bdr].sort_values(by='VL_MERC_POS_FINAL', ascending=False)
+    # Selecionando apenas o ativo 'BDR' e 'Ações' (Units), porque neste arquivo também possui um ativo chamado 'Títulos Públicos', mas não é o principal 'Títulos Públicos', que está no 'cda_fi_BLC_1'
+    filt = (df['TP_APLIC'] == 'Brazilian Depository Receipt - BDR') | (df['TP_APLIC'] == 'Ações')
+    df = df.loc[filt].sort_values(by='VL_MERC_POS_FINAL', ascending=False)
     
     return df
 
@@ -422,14 +422,18 @@ def fundo_cnpj_acoes(df: pd.DataFrame, cnpj: str) -> pd.DataFrame:
 
     # Ações
     filt_acoes = (fundo_espec['TP_APLIC'] == 'Ações')
-    # Selecionando pelo em ordem da maior posição do fundo p/ a menor
+    # Selecionando em ordem da maior posição do fundo p/ a menor
     df_acoes = fundo_espec.loc[filt_acoes].sort_values(by='VL_MERC_POS_FINAL', ascending=False)
     # Calculando quantos porcentos representa cada ação
     porcentagem_acao = lambda x: (x / df_acoes['VL_MERC_POS_FINAL'].sum())
     # Criando a coluna 'PORCENTAGEM'
     df_acoes['PORCENTAGEM'] = list(map(porcentagem_acao, df_acoes['VL_MERC_POS_FINAL']))
     # Selecionando apenas as colunas necessárias
-    df_acoes = df_acoes.loc[:,['DENOM_SOCIAL', 'CD_ATIVO', 'PORCENTAGEM', 'VL_MERC_POS_FINAL']]
+    df_acoes = df_acoes.loc[:,['DT_COMPTC', 'DENOM_SOCIAL', 'CD_ATIVO', 'PORCENTAGEM', 'VL_MERC_POS_FINAL']]
+    # Renomeando a coluna 'DT_COMPTC' para 'data'
+    df_acoes = df_acoes.rename(columns={'DT_COMPTC' : 'data'})
+    # Selecionando a coluna 'data' como index
+    df_acoes = df_acoes.set_index('data')
 
     return df_acoes
 
