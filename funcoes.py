@@ -112,23 +112,50 @@ def open_cda_1(path: str) -> pd.DataFrame:
     # Lendo o arquivo
     df = pd.read_parquet(path)
 
+    # Verificando as colunas 'TP_FUNDO' ou 'TP_FUNDO_CLASSE'
+    if 'TP_FUNDO' in df.columns:
+        tp_fundo_col = 'TP_FUNDO'
+    elif 'TP_FUNDO_CLASSE' in df.columns:
+        tp_fundo_col = 'TP_FUNDO_CLASSE'
+    else:
+        raise ValueError("Nenhuma das colunas 'TP_FUNDO' ou 'TP_FUNDO_CLASSE' foi encontrada no arquivo.")
+
+    # Verificando as colunas 'CNPJ_FUNDO' ou 'CNPJ_FUNDO_CLASSE'
+    if 'CNPJ_FUNDO' in df.columns:
+        cnpj_fundo_col = 'CNPJ_FUNDO'
+    elif 'CNPJ_FUNDO_CLASSE' in df.columns:
+        cnpj_fundo_col = 'CNPJ_FUNDO_CLASSE'
+    else:
+        raise ValueError("Nenhuma das colunas 'CNPJ_FUNDO' ou 'CNPJ_FUNDO_CLASSE' foi encontrada no arquivo.")
+
     # Selecionando apenas os 'Fundos de Investimentos'
-    filt_fi = df['TP_FUNDO'] == 'FI'
+    filt_fi = df[tp_fundo_col] == 'FI'
     df = df.loc[filt_fi]
 
     # Selecionando as principais colunas
-    df = df[['TP_FUNDO', 'CNPJ_FUNDO', 'DENOM_SOCIAL','DT_COMPTC' , 'TP_APLIC', 'TP_ATIVO', 'VL_MERC_POS_FINAL', 'TP_TITPUB', 'DT_VENC']]
+    columns_to_keep = [
+        tp_fundo_col, 
+        cnpj_fundo_col, 
+        'DENOM_SOCIAL', 
+        'DT_COMPTC', 
+        'TP_APLIC', 
+        'TP_ATIVO', 
+        'VL_MERC_POS_FINAL', 
+        'TP_TITPUB', 
+        'DT_VENC'
+    ]
+    df = df[columns_to_keep]
 
-    # Mesclando as colunas 'TP_TITPUB' e 'DT_VENC' em apenas em uma coluna
+    # Mesclando as colunas 'TP_TITPUB' e 'DT_VENC' em apenas uma coluna
     df['TP_TITPUB'] = df['TP_TITPUB'] + ' ' + df['DT_VENC']
 
     # Removendo a coluna 'DT_VENC'
     df = df.drop('DT_VENC', axis=1)
 
-    # Renomeando a coluna 'TP_TITPUB' p/ 'CD_ATIVO'. Assim fica igual ao df do arquivo cda_fi_BLC_2/4/7/8 para fazer depois juntar os dfs
-    df = df.rename(columns={'TP_TITPUB':'CD_ATIVO'})
+    # Renomeando as colunas para manter consistência
+    df = df.rename(columns={tp_fundo_col: 'TP_FUNDO', cnpj_fundo_col: 'CNPJ_FUNDO', 'TP_TITPUB': 'CD_ATIVO'})
 
-    # Transformando os dtypes das colunas.
+    # Transformando os dtypes das colunas
     df['TP_FUNDO'] = df['TP_FUNDO'].astype(str)
     df['CNPJ_FUNDO'] = df['CNPJ_FUNDO'].astype(str)
     df['DENOM_SOCIAL'] = df['DENOM_SOCIAL'].astype(str)
@@ -154,15 +181,49 @@ def open_cda_2(path: str) -> pd.DataFrame:
     # Lendo o arquivo. Adicionei o 'low_memory=False' para não dar o aviso -> DtypeWarning: Columns (7) have mixed types. Specify dtype option on import or set low_memory=False
     df = pd.read_parquet(path)
 
+    # Verificando as colunas 'TP_FUNDO' ou 'TP_FUNDO_CLASSE'
+    if 'TP_FUNDO' in df.columns:
+        tp_fundo_col = 'TP_FUNDO'
+    elif 'TP_FUNDO_CLASSE' in df.columns:
+        tp_fundo_col = 'TP_FUNDO_CLASSE'
+    else:
+        raise ValueError("Nenhuma das colunas 'TP_FUNDO' ou 'TP_FUNDO_CLASSE' foi encontrada no arquivo.")
+
+    # Verificando as colunas 'CNPJ_FUNDO' ou 'CNPJ_FUNDO_CLASSE'
+    if 'CNPJ_FUNDO' in df.columns:
+        cnpj_fundo_col = 'CNPJ_FUNDO'
+    elif 'CNPJ_FUNDO_CLASSE' in df.columns:
+        cnpj_fundo_col = 'CNPJ_FUNDO_CLASSE'
+    else:
+        raise ValueError("Nenhuma das colunas 'CNPJ_FUNDO' ou 'CNPJ_FUNDO_CLASSE' foi encontrada no arquivo.")
+    
+    # Verificando as colunas 'NM_FUNDO_COTA' ou 'NM_FUNDO_CLASSE_SUBCLASSE_COTA'
+    if 'NM_FUNDO_COTA' in df.columns:
+        nm_fundo_cota_col = 'NM_FUNDO_COTA'
+    elif 'NM_FUNDO_CLASSE_SUBCLASSE_COTA' in df.columns:
+        nm_fundo_cota_col = 'NM_FUNDO_CLASSE_SUBCLASSE_COTA'
+    else:
+        raise ValueError("Nenhuma das colunas 'NM_FUNDO_COTA' ou 'NM_FUNDO_CLASSE_SUBCLASSE_COTA' foi encontrada no arquivo.")
+
     # Selecionando apenas os 'Fundos de Investimentos'
-    filt_fi = df['TP_FUNDO'] == 'FI'
+    filt_fi = df[tp_fundo_col] == 'FI'
     df = df.loc[filt_fi]
 
     # Selecionando as principais colunas
-    df = df[['TP_FUNDO', 'CNPJ_FUNDO', 'DENOM_SOCIAL','DT_COMPTC' , 'TP_APLIC', 'TP_ATIVO', 'VL_MERC_POS_FINAL', 'NM_FUNDO_COTA']]
+    columns_to_keep = [
+        tp_fundo_col, 
+        cnpj_fundo_col, 
+        'DENOM_SOCIAL', 
+        'DT_COMPTC', 
+        'TP_APLIC', 
+        'TP_ATIVO', 
+        'VL_MERC_POS_FINAL', 
+        nm_fundo_cota_col
+    ]
+    df = df[columns_to_keep]
 
-    # Renomeando a coluna 'NM_FUNDO_COTA' p/ 'CD_ATIVO'. Assim fica igual ao df do arquivo cda_fi_BLC_4/7/8 para fazer depois juntar os dfs
-    df = df.rename(columns={'NM_FUNDO_COTA':'CD_ATIVO'})
+    # Renomeando as colunas. Assim fica igual ao df do arquivo cda_fi_BLC_4/7/8 para fazer depois juntar os dfs
+    df = df.rename(columns={tp_fundo_col: 'TP_FUNDO', cnpj_fundo_col: 'CNPJ_FUNDO', nm_fundo_cota_col:'CD_ATIVO'})
 
     # Transformando os dtypes das colunas
     df['TP_FUNDO'] = df['TP_FUNDO'].astype(str)
@@ -190,12 +251,41 @@ def open_cda_4(path: str) -> pd.DataFrame:
     # Lendo o arquivo
     df = pd.read_parquet(path)
 
+    # Verificando as colunas 'TP_FUNDO' ou 'TP_FUNDO_CLASSE'
+    if 'TP_FUNDO' in df.columns:
+        tp_fundo_col = 'TP_FUNDO'
+    elif 'TP_FUNDO_CLASSE' in df.columns:
+        tp_fundo_col = 'TP_FUNDO_CLASSE'
+    else:
+        raise ValueError("Nenhuma das colunas 'TP_FUNDO' ou 'TP_FUNDO_CLASSE' foi encontrada no arquivo.")
+
+    # Verificando as colunas 'CNPJ_FUNDO' ou 'CNPJ_FUNDO_CLASSE'
+    if 'CNPJ_FUNDO' in df.columns:
+        cnpj_fundo_col = 'CNPJ_FUNDO'
+    elif 'CNPJ_FUNDO_CLASSE' in df.columns:
+        cnpj_fundo_col = 'CNPJ_FUNDO_CLASSE'
+    else:
+        raise ValueError("Nenhuma das colunas 'CNPJ_FUNDO' ou 'CNPJ_FUNDO_CLASSE' foi encontrada no arquivo.")
+
     # Selecionando apenas os 'Fundos de Investimentos'
-    filt_fi = df['TP_FUNDO'] == 'FI'
+    filt_fi = df[tp_fundo_col] == 'FI'
     df = df.loc[filt_fi]
 
     # Selecionando as principais colunas
-    df = df[['TP_FUNDO', 'CNPJ_FUNDO', 'DENOM_SOCIAL','DT_COMPTC' , 'TP_APLIC', 'TP_ATIVO', 'VL_MERC_POS_FINAL', 'CD_ATIVO']]
+    columns_to_keep = [
+        tp_fundo_col, 
+        cnpj_fundo_col, 
+        'DENOM_SOCIAL', 
+        'DT_COMPTC', 
+        'TP_APLIC', 
+        'TP_ATIVO', 
+        'VL_MERC_POS_FINAL', 
+        'CD_ATIVO'
+    ]
+    df = df[columns_to_keep]
+
+    # Renomeando as colunas para manter consistência
+    df = df.rename(columns={tp_fundo_col: 'TP_FUNDO', cnpj_fundo_col: 'CNPJ_FUNDO'})
 
     # Transformando os dtypes das colunas
     df['TP_FUNDO'] = df.loc[:, 'TP_FUNDO'].astype(str)
@@ -223,15 +313,41 @@ def open_cda_7(path: str) -> pd.DataFrame:
     # Lendo o arquivo
     df = pd.read_parquet(path)
 
+    # Verificando as colunas 'TP_FUNDO' ou 'TP_FUNDO_CLASSE'
+    if 'TP_FUNDO' in df.columns:
+        tp_fundo_col = 'TP_FUNDO'
+    elif 'TP_FUNDO_CLASSE' in df.columns:
+        tp_fundo_col = 'TP_FUNDO_CLASSE'
+    else:
+        raise ValueError("Nenhuma das colunas 'TP_FUNDO' ou 'TP_FUNDO_CLASSE' foi encontrada no arquivo.")
+
+    # Verificando as colunas 'CNPJ_FUNDO' ou 'CNPJ_FUNDO_CLASSE'
+    if 'CNPJ_FUNDO' in df.columns:
+        cnpj_fundo_col = 'CNPJ_FUNDO'
+    elif 'CNPJ_FUNDO_CLASSE' in df.columns:
+        cnpj_fundo_col = 'CNPJ_FUNDO_CLASSE'
+    else:
+        raise ValueError("Nenhuma das colunas 'CNPJ_FUNDO' ou 'CNPJ_FUNDO_CLASSE' foi encontrada no arquivo.")
+
     # Selecionando apenas os 'Fundos de Investimentos'
-    filt_fi = df['TP_FUNDO'] == 'FI'
+    filt_fi = df[tp_fundo_col] == 'FI'
     df = df.loc[filt_fi]
 
-    # Selecionando as principais colunas.
-    df = df[['TP_FUNDO', 'CNPJ_FUNDO', 'DENOM_SOCIAL','DT_COMPTC' , 'TP_APLIC', 'TP_ATIVO', 'VL_MERC_POS_FINAL', 'EMISSOR']]
+    # Selecionando as principais colunas
+    columns_to_keep = [
+        tp_fundo_col, 
+        cnpj_fundo_col, 
+        'DENOM_SOCIAL', 
+        'DT_COMPTC', 
+        'TP_APLIC', 
+        'TP_ATIVO', 
+        'VL_MERC_POS_FINAL', 
+        'EMISSOR'
+    ]
+    df = df[columns_to_keep]
 
-    # Renomeando a coluna 'EMISSOR' p/ 'CD_ATIVO'. Assim fica igual ao df do arquivo cda_fi_BLC_4 p/ fazer depois juntar os dfs.
-    df.rename(columns={"EMISSOR": "CD_ATIVO"}, inplace=True)
+    # Renomeando as colunas. Assim fica igual ao df do arquivo cda_fi_BLC_4 p/ fazer depois juntar os dfs.
+    df.rename(columns={tp_fundo_col: 'TP_FUNDO', cnpj_fundo_col: 'CNPJ_FUNDO', 'EMISSOR': 'CD_ATIVO'}, inplace=True)
 
     # Transformando os dtypes das colunas.
     df['TP_FUNDO'] = df.loc[:, 'TP_FUNDO'].astype(str)
@@ -259,15 +375,41 @@ def open_cda_8(path: str) -> pd.DataFrame:
     # Lendo o arquivo
     df = pd.read_parquet(path)
 
+    # Verificando as colunas 'TP_FUNDO' ou 'TP_FUNDO_CLASSE'
+    if 'TP_FUNDO' in df.columns:
+        tp_fundo_col = 'TP_FUNDO'
+    elif 'TP_FUNDO_CLASSE' in df.columns:
+        tp_fundo_col = 'TP_FUNDO_CLASSE'
+    else:
+        raise ValueError("Nenhuma das colunas 'TP_FUNDO' ou 'TP_FUNDO_CLASSE' foi encontrada no arquivo.")
+
+    # Verificando as colunas 'CNPJ_FUNDO' ou 'CNPJ_FUNDO_CLASSE'
+    if 'CNPJ_FUNDO' in df.columns:
+        cnpj_fundo_col = 'CNPJ_FUNDO'
+    elif 'CNPJ_FUNDO_CLASSE' in df.columns:
+        cnpj_fundo_col = 'CNPJ_FUNDO_CLASSE'
+    else:
+        raise ValueError("Nenhuma das colunas 'CNPJ_FUNDO' ou 'CNPJ_FUNDO_CLASSE' foi encontrada no arquivo.")
+
     # Selecionando apenas os 'Fundos de Investimentos'
-    filt_fi = df['TP_FUNDO'] == 'FI'
+    filt_fi = df[tp_fundo_col] == 'FI'
     df = df.loc[filt_fi]
 
     # Selecionando as principais colunas
-    df = df[['TP_FUNDO', 'CNPJ_FUNDO', 'DENOM_SOCIAL','DT_COMPTC' , 'TP_APLIC', 'TP_ATIVO', 'VL_MERC_POS_FINAL', 'DS_ATIVO']]
+    columns_to_keep = [
+        tp_fundo_col, 
+        cnpj_fundo_col, 
+        'DENOM_SOCIAL', 
+        'DT_COMPTC', 
+        'TP_APLIC', 
+        'TP_ATIVO', 
+        'VL_MERC_POS_FINAL', 
+        'DS_ATIVO'
+    ]
+    df = df[columns_to_keep]
 
-    # Renomeando a coluna 'DS_ATIVO' p/ 'CD_ATIVO'. Assim fica igual ao df do arquivo cda_fi_BLC_4 p/ fazer depois juntar os dfs
-    df.rename(columns={"DS_ATIVO": "CD_ATIVO"}, inplace=True)
+    # Renomeando as colunas. Assim fica igual ao df do arquivo cda_fi_BLC_4 p/ fazer depois juntar os dfs
+    df.rename(columns={tp_fundo_col: 'TP_FUNDO', cnpj_fundo_col: 'CNPJ_FUNDO', 'DS_ATIVO': 'CD_ATIVO'}, inplace=True)
 
     # Transformando os dtypes das colunas
     df['TP_FUNDO'] = df.loc[:, 'TP_FUNDO'].astype(str)
@@ -300,12 +442,28 @@ def pl_fundo(path: str, cnpj: str) -> pd.DataFrame:
     # Lendo o arquivo
     df = pd.read_parquet(path)
 
+    # Verificando as colunas 'TP_FUNDO' ou 'TP_FUNDO_CLASSE'
+    if 'TP_FUNDO' in df.columns:
+        tp_fundo_col = 'TP_FUNDO'
+    elif 'TP_FUNDO_CLASSE' in df.columns:
+        tp_fundo_col = 'TP_FUNDO_CLASSE'
+    else:
+        raise ValueError("Nenhuma das colunas 'TP_FUNDO' ou 'TP_FUNDO_CLASSE' foi encontrada no arquivo.")
+
+    # Verificando as colunas 'CNPJ_FUNDO' ou 'CNPJ_FUNDO_CLASSE'
+    if 'CNPJ_FUNDO' in df.columns:
+        cnpj_fundo_col = 'CNPJ_FUNDO'
+    elif 'CNPJ_FUNDO_CLASSE' in df.columns:
+        cnpj_fundo_col = 'CNPJ_FUNDO_CLASSE'
+    else:
+        raise ValueError("Nenhuma das colunas 'CNPJ_FUNDO' ou 'CNPJ_FUNDO_CLASSE' foi encontrada no arquivo.")
+
     # Selecionando apenas os 'Fundos de Investimentos'
-    filt_fi = df['TP_FUNDO'] == 'FI'
+    filt_fi = df[tp_fundo_col] == 'FI'
     df = df.loc[filt_fi]
 
     # Selecionando o fundo de investimentos específicos
-    filt_cnpj = df['CNPJ_FUNDO'] == cnpj
+    filt_cnpj = df[cnpj_fundo_col] == cnpj
     fundo_espec = df.loc[filt_cnpj]
 
     # # Transformando os dtypes da coluna
@@ -1144,8 +1302,8 @@ def indicadores_acoes_shoppings(ano: str, mes: str, dict_shoppings: dict, ticker
     df_acoes_shoppings.loc['IGTI11.SA', 'valor_mercado'] = vm_igti_2T24
     # Calculando o 'enterprise_value'
     df_acoes_shoppings['enterprise_value'] = df_acoes_shoppings['valor_mercado'] + df_acoes_shoppings['divida_liquida'] 
-    # Calculando 'ev_abl' (EV/m²)
-    df_acoes_shoppings['ev_abl'] =  round(df_acoes_shoppings['enterprise_value'] / df_acoes_shoppings['abl_propria'], 2)
+    # Calculando 'ev/abl' (EV/m²)
+    df_acoes_shoppings['ev/abl'] =  round(df_acoes_shoppings['enterprise_value'] / df_acoes_shoppings['abl_propria'], 2)
 
     return df_acoes_shoppings
 
