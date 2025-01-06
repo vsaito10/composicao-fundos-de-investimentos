@@ -758,48 +758,51 @@ def open_arquivos_fii(fii_ativo_passivo_path: str, fii_complemento_path: str, fi
     df_complemento = pd.read_parquet(fii_complemento_path)
     df_geral = pd.read_parquet(fii_geral_path)
 
-    # Selecionando as principais colunas e transformando a coluna 'Data_Referencia' em datetime
+    # Identificando o nome correto da coluna de CNPJ em cada DataFrame
+    cnpj_fundo_col_ativo_passivo = 'CNPJ_Fundo' if 'CNPJ_Fundo' in df_ativo_passivo.columns else 'CNPJ_Fundo_Classe'
+    cnpj_fundo_col_complemento = 'CNPJ_Fundo' if 'CNPJ_Fundo' in df_complemento.columns else 'CNPJ_Fundo_Classe'
+    cnpj_fundo_col_geral = 'CNPJ_Fundo' if 'CNPJ_Fundo' in df_geral.columns else 'CNPJ_Fundo_Classe'
+
+    # Renomeando a coluna de CNPJ para o mesmo nome p/ fazer a junção dos dfs
+    df_ativo_passivo.rename(columns={cnpj_fundo_col_ativo_passivo: 'CNPJ_Fundo'}, inplace=True)
+    df_complemento.rename(columns={cnpj_fundo_col_complemento: 'CNPJ_Fundo'}, inplace=True)
+    df_geral.rename(columns={cnpj_fundo_col_geral: 'CNPJ_Fundo'}, inplace=True)
+
+    # Selecionando as principais colunas
     df_ativo_passivo = df_ativo_passivo[[
         'Data_Referencia', 
         'CNPJ_Fundo', 
         'Obrigacoes_Aquisicao_Imoveis', 
         'Obrigacoes_Securitizacao_Recebiveis'
     ]]
-
     df_complemento = df_complemento[[
         'Data_Referencia', 
         'CNPJ_Fundo', 
         'Valor_Ativo', 
         'Patrimonio_Liquido', 
-        'Cotas_Emitidas', 
-        'Valor_Patrimonial_Cotas',
-        'Percentual_Rentabilidade_Efetiva_Mes',
+        'Cotas_Emitidas',
+        'Valor_Patrimonial_Cotas', 
+        'Percentual_Rentabilidade_Efetiva_Mes', 
         'Percentual_Dividend_Yield_Mes'
     ]]
-
     df_geral = df_geral[[
-        'Data_Referencia',
+        'Data_Referencia', 
         'CNPJ_Fundo', 
         'Segmento_Atuacao'
     ]]
 
-    # Arrumando a escala das colunas
+    # Ajustando a escala das colunas de porcentagem
     df_complemento['Percentual_Rentabilidade_Efetiva_Mes'] = round(df_complemento['Percentual_Rentabilidade_Efetiva_Mes'] * 100, 2)
     df_complemento['Percentual_Dividend_Yield_Mes'] = round(df_complemento['Percentual_Dividend_Yield_Mes'] * 100, 2)
 
-    # Transformando em datetime
-    df_ativo_passivo['Data_Referencia'] = pd.to_datetime(df_ativo_passivo['Data_Referencia'], format='%Y-%m-%d')
-    df_complemento['Data_Referencia'] = pd.to_datetime(df_complemento['Data_Referencia'], format='%Y-%m-%d')
-    df_geral['Data_Referencia'] = pd.to_datetime(df_geral['Data_Referencia'], format='%Y-%m-%d')
-
-    # Verificando se há espaços em branco ou discrepâncias nas colunas de junção
-    df_ativo_passivo['CNPJ_Fundo'] = df_ativo_passivo['CNPJ_Fundo'].str.strip()
-    df_complemento['CNPJ_Fundo'] = df_complemento['CNPJ_Fundo'].str.strip()
-    df_geral['CNPJ_Fundo'] = df_geral['CNPJ_Fundo'].str.strip()
+    # Transformando em datetime a coluna 'Data_Referencia' e removendos os espaços em branco da coluna 'CNPJ_Fundo'
+    for df in [df_ativo_passivo, df_complemento, df_geral]:
+        df['Data_Referencia'] = pd.to_datetime(df['Data_Referencia'], format='%Y-%m-%d')
+        df['CNPJ_Fundo'] = df['CNPJ_Fundo'].str.strip()
 
     # Lista dos dfs que vão ser mesclados
     lst_dfs = [df_ativo_passivo, df_complemento, df_geral]
-    
+
     # Mesclando os dataframes
     df_fii = reduce(lambda left, right: pd.merge(left, right, on=['CNPJ_Fundo', 'Data_Referencia']), lst_dfs)
 
