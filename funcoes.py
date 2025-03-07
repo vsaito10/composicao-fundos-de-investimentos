@@ -843,10 +843,21 @@ def fii_cnpj(df: pd.DataFrame, cnpj: str, ticker: str) -> pd.DataFrame:
     # Último mês
     ultimo_mes = df.index[-1].month
 
-    # Fazendo o download dos preço do FII
-    fii_preco = yf.download(ticker, start=f'{primeiro_ano}-{primeiro_mes}-01', end=f'{ultimo_ano}-{ultimo_mes+1}-01')['Close']
-    # Renomeando o nome do index 
-    fii_preco = fii_preco.rename_axis('Data_Referencia')
+    # Se o 'ultimo_mes' for diferente de 12, adicionar somar 1 no 'ultimo_mes'
+    if ultimo_mes != 12:
+        # Fazendo o download dos preço do FII
+        fii_preco = yf.download(ticker, start=f'{primeiro_ano}-{primeiro_mes}-01', end=f'{ultimo_ano}-{ultimo_mes+1}-01', auto_adjust=True)['Close']
+
+    else: 
+        # Fazendo o download dos preço do FII
+        fii_preco = yf.download(ticker, start=f'{primeiro_ano}-{primeiro_mes}-01', end=f'{ultimo_ano}-{ultimo_mes}-01', auto_adjust=True)['Close']
+
+    # Resetando o index do df
+    fii_preco = fii_preco.reset_index()
+    # Renomeando as colunas 
+    fii_preco.columns = ['Data_Referencia', 'Close']
+    # Transformando a coluna 'Data_Referencia' em  index 
+    fii_preco = fii_preco.set_index('Data_Referencia')
     # Usando o resample para agrupar por mês e selecionando o último valor de cada mês
     fii_preco = fii_preco.resample('M').last()
     # Transformando os dias do index para 01 p/ juntar com o 'df_ifix'
@@ -937,8 +948,11 @@ def vol_anual(ticker: str, ano: str) -> pd.Series:
     NOTE: para calcular a vol semanal trocar apenas o np.sqrt(52).
     """
     # Preço de fechamento do ativo
-    df_preco = yf.download(ticker)['Close']
-
+    df_preco = yf.download(ticker, auto_adjust=True)['Close']
+    # Resetando o index do df
+    df_preco = df_preco.reset_index()
+    # Transformando a coluna 'Date' em  index 
+    df_preco = df_preco.set_index('Date')
     # Calculando o retorno logarítmico
     log_return = np.log(df_preco.loc[ano, ticker] / df_preco.loc[ano, ticker].shift(1))
 
@@ -959,7 +973,11 @@ def drawdown(ticker: str) -> pd.Series:
     Ponto mínimo do drawdown.
     """
     # Df do preço do ativo
-    df_preco = yf.download(ticker)['Close']
+    df_preco = yf.download(ticker, auto_adjust=True)['Close']
+    # Resetando o index do df
+    df_preco = df_preco.reset_index()
+    # Transformando a coluna 'Date' em  index 
+    df_preco = df_preco.set_index('Date')
 
     # Calculando o retorno diário
     df_returns = df_preco.pct_change().dropna()
@@ -987,7 +1005,11 @@ def ret_acumulado(ticker: str, setor: str, df_benchmark: pd.DataFrame):
     Plot do retorno acumulado do(s) ativo(s).
     """
     # Df do preço do ativo
-    df_preco = yf.download(ticker)['Close']
+    df_preco = yf.download(ticker, auto_adjust=True)['Close']
+    # Resetando o index do df
+    df_preco = df_preco.reset_index()
+    # Transformando a coluna 'Date' em  index 
+    df_preco = df_preco.set_index('Date')
 
     # Calculando o retorno diário
     df_returns = df_preco.pct_change().dropna()
@@ -1041,7 +1063,11 @@ def ret_anual(ticker:str, setor: str, df_benchmark: pd.DataFrame):
     Plot do retorno anual do(s) ativo(s).
     """
     # Download dos preços do ativo
-    df_preco = yf.download(ticker)['Close']
+    df_preco = yf.download(ticker, auto_adjust=True)['Close']
+    # Resetando o index do df
+    df_preco = df_preco.reset_index()
+    # Transformando a coluna 'Date' em  index 
+    df_preco = df_preco.set_index('Date')
 
     # Ano atual para calcular o retorno do ano anterior
     ano_atual = 2024
@@ -1093,7 +1119,11 @@ def plot_risk_return(ticker: str, setor: str):
     """
 
     # Df do preço do ativo
-    df_preco = yf.download(ticker)['Close']
+    df_preco = yf.download(ticker, auto_adjust=True)['Close']
+    # Resetando o index do df
+    df_preco = df_preco.reset_index()
+    # Transformando a coluna 'Date' em  index 
+    df_preco = df_preco.set_index('Date')
 
     # Calculando o retorno diário
     df_returns = np.log(df_preco / df_preco.shift(1))
@@ -1239,9 +1269,18 @@ def vm_igti(ano: str, mes: str, num_on: int, num_pn: int):
     # ITR 2T -> mes: '06'
     # ITR 3T -> mes: '09'
     # DFP 4T -> mes: '12'
+
+    # Lista com os tickers ON e PN da Iguatemi
     lst_iguatemi = ['IGTI3.SA', 'IGTI4.SA']
-    preco_iguatemi = yf.download(lst_iguatemi)['Adj Close']
+    # Df do preço do ativo
+    preco_iguatemi = yf.download(lst_iguatemi, auto_adjust=True)['Close']
+    # Resetando o index do df
+    preco_iguatemi = preco_iguatemi.reset_index()
+    # Transformando a coluna 'Date' em  index 
+    preco_iguatemi = preco_iguatemi.set_index('Date')
+    # Selecionando pelo ano e mês
     preco_iguatemi = preco_iguatemi.loc[f'{ano}-{mes}']
+    # Selecionando o último dado
     preco_iguatemi = preco_iguatemi.iloc[-1]
 
     # Número de ações do IGTI
@@ -1276,9 +1315,19 @@ def indicadores_acoes_shoppings(ano: str, mes: str, dict_shoppings: dict, ticker
     # ITR 2T -> mes: '06'
     # ITR 3T -> mes: '09'
     # DFP 4T -> mes: '12'
-    preco_shopping = yf.download(ticker)['Adj Close']
+
+    # Df do preço do ativo
+    preco_shopping = yf.download(ticker, auto_adjust=True)['Close']
+    # Resetando o index do df
+    preco_shopping = preco_shopping.reset_index()
+    # Transformando a coluna 'Date' em  index 
+    preco_shopping = preco_shopping.set_index('Date')
+
+    # Selecionando pelo ano e mês
     preco_shopping = preco_shopping.loc[f'{ano}-{mes}']
+    # Selecionando o último dado
     ultimo_preco_shopping = preco_shopping.iloc[-1]
+    # Renomeando a coluna para 'preco'
     ultimo_preco_shopping = ultimo_preco_shopping.rename('preco')
 
     # Transformando em um df
