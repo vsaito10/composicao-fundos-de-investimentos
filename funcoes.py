@@ -1,3 +1,4 @@
+from datetime import datetime
 from functools import reduce
 from plotly.subplots import make_subplots
 import matplotlib.pyplot as plt
@@ -1070,7 +1071,7 @@ def ret_anual(ticker:str, setor: str, df_benchmark: pd.DataFrame):
     df_preco = df_preco.set_index('Date')
 
     # Ano atual para calcular o retorno do ano anterior
-    ano_atual = 2024
+    ano_atual = datetime.now().year
 
     # Calculando o retorno anual
     lst_ret_anual = []
