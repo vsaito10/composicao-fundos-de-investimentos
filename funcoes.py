@@ -1235,15 +1235,17 @@ def dy_fii_acumm_12m(df: pd.DataFrame) -> pd.Series:
     return df_dy_accum
 
 
-def consulta_bc(codigo_bcb: str):
+def consulta_bc(codigo_bcb: str, data_inicial: str, data_final: str):
     """
     Parameters:
     codigo_bcb: código da série do BC.
+    data_inicial: data inicial da série - no formato dia/mes/ano -> 01/01/2024.
+    data_final: data final da série - no formato dia/mes/ano -> 01/01/2024.
 
     Returns:
     df: Dataframe da série do BC.
     """
-    url = f'https://api.bcb.gov.br/dados/serie/bcdata.sgs.{codigo_bcb}/dados?formato=json'
+    url = f'https://api.bcb.gov.br/dados/serie/bcdata.sgs.{codigo_bcb}/dados?formato=json&dataInicial={data_inicial}&dataFinal={data_final}'
     df = pd.read_json(url)
     df['data'] = pd.to_datetime(df['data'], dayfirst=True)
     df.set_index('data', inplace= True)
