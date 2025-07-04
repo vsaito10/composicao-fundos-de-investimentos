@@ -268,8 +268,8 @@ def open_cda_4(path: str) -> pd.DataFrame:
     else:
         raise ValueError("Nenhuma das colunas 'CNPJ_FUNDO' ou 'CNPJ_FUNDO_CLASSE' foi encontrada no arquivo.")
 
-    # Selecionando apenas os 'Fundos de Investimentos'
-    filt_fi = df[tp_fundo_col] == 'FI'
+    # Selecionando apenas os 'Fundos de Investimentos' e 'Fundo de Investimento Financeiro'
+    filt_fi = df[tp_fundo_col].isin(['FI', 'CLASSES - FIF'])
     df = df.loc[filt_fi]
 
     # Selecionando as principais colunas
@@ -459,8 +459,8 @@ def pl_fundo(path: str, cnpj: str) -> pd.DataFrame:
     else:
         raise ValueError("Nenhuma das colunas 'CNPJ_FUNDO' ou 'CNPJ_FUNDO_CLASSE' foi encontrada no arquivo.")
 
-    # Selecionando apenas os 'Fundos de Investimentos'
-    filt_fi = df[tp_fundo_col] == 'FI'
+    # Selecionando apenas os 'Fundos de Investimentos' e 'Fundo de Investimento Financeiro'
+    filt_fi = df[tp_fundo_col].isin(['FI', 'CLASSES - FIF'])
     df = df.loc[filt_fi]
 
     # Selecionando o fundo de investimentos específicos
