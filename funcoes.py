@@ -301,6 +301,72 @@ def open_cda_4(path: str) -> pd.DataFrame:
     return df
 
 
+def open_cda_4_v2(path: str) -> pd.DataFrame:
+    """
+    Formata o arquivo 'cda_fi_BLC_4'.
+
+    Parameters:
+    path: caminho do arquivo 'open_cda_4'.
+
+    Returns:
+    Dataframe do arquivo 'cda_fi_BLC_4'
+
+    NOTE: Eu criei essa função para analisar melhor as posições de opções dos fundos com duas colunas a mais ('DT_INI_VIGENCIA' e 'DT_FIM_VIGENCIA')
+    """
+    # Lendo o arquivo
+    df = pd.read_parquet(path)
+
+    # Verificando as colunas 'TP_FUNDO' ou 'TP_FUNDO_CLASSE'
+    if 'TP_FUNDO' in df.columns:
+        tp_fundo_col = 'TP_FUNDO'
+    elif 'TP_FUNDO_CLASSE' in df.columns:
+        tp_fundo_col = 'TP_FUNDO_CLASSE'
+    else:
+        raise ValueError("Nenhuma das colunas 'TP_FUNDO' ou 'TP_FUNDO_CLASSE' foi encontrada no arquivo.")
+
+    # Verificando as colunas 'CNPJ_FUNDO' ou 'CNPJ_FUNDO_CLASSE'
+    if 'CNPJ_FUNDO' in df.columns:
+        cnpj_fundo_col = 'CNPJ_FUNDO'
+    elif 'CNPJ_FUNDO_CLASSE' in df.columns:
+        cnpj_fundo_col = 'CNPJ_FUNDO_CLASSE'
+    else:
+        raise ValueError("Nenhuma das colunas 'CNPJ_FUNDO' ou 'CNPJ_FUNDO_CLASSE' foi encontrada no arquivo.")
+
+    # Selecionando apenas os 'Fundos de Investimentos' e 'Fundo de Investimento Financeiro'
+    filt_fi = df[tp_fundo_col].isin(['FI', 'CLASSES - FIF'])
+    df = df.loc[filt_fi]
+
+    # Selecionando as principais colunas
+    columns_to_keep = [
+        tp_fundo_col, 
+        cnpj_fundo_col, 
+        'DENOM_SOCIAL', 
+        'DT_COMPTC', 
+        'TP_APLIC', 
+        'TP_ATIVO', 
+        'VL_MERC_POS_FINAL', 
+        'CD_ATIVO',
+        'DT_INI_VIGENCIA',
+        'DT_FIM_VIGENCIA'
+    ]
+    df = df[columns_to_keep]
+
+    # Renomeando as colunas para manter consistência
+    df = df.rename(columns={tp_fundo_col: 'TP_FUNDO', cnpj_fundo_col: 'CNPJ_FUNDO'})
+
+    # Transformando os dtypes das colunas
+    df['TP_FUNDO'] = df.loc[:, 'TP_FUNDO'].astype(str)
+    df['CNPJ_FUNDO'] = df.loc[:, 'CNPJ_FUNDO'].astype(str)
+    df['DENOM_SOCIAL'] = df.loc[:, 'DENOM_SOCIAL'].astype(str)
+    df['DT_COMPTC'] = pd.to_datetime(df['DT_COMPTC'])
+    df['TP_APLIC'] = df.loc[:, 'TP_APLIC'].astype(str)
+    df['TP_ATIVO'] = df.loc[:, 'TP_ATIVO'].astype(str)
+    df['VL_MERC_POS_FINAL'] = df.loc[:, 'VL_MERC_POS_FINAL'].astype(float)
+    df['CD_ATIVO'] = df.loc[:, 'CD_ATIVO'].astype(str)
+
+    return df
+
+
 def open_cda_7(path: str) -> pd.DataFrame:
     """
     Formata o arquivo 'cda_fi_BLC_7'.
@@ -624,6 +690,55 @@ def fundo_cnpj_debentures(df: pd.DataFrame, cnpj: str) -> pd.DataFrame:
     df_debentures = df_debentures.loc[:,['DENOM_SOCIAL', 'CD_ATIVO', 'PORCENTAGEM', 'VL_MERC_POS_FINAL']]
 
     return df_debentures
+
+
+def fundo_cnpj_opcoes(df: pd.DataFrame, cnpj: str) -> pd.DataFrame:
+    """
+    Separa o df do fundo de investimento apenas na categoria de opções.
+
+    Parameters:
+    df: Dataframe que contém os ativos dos fundos.
+    cnpj: cnpj do fundo de investimento.
+
+    Returns:
+    df_opcoes_compradas: Dataframe das opções compradas do fundo selecionado.
+    df_opcoes_vendidas: Dataframe das opções vendidas do fundo selecionado.
+    """
+    # Lendo o df concatenado
+    filt_cnpj = df['CNPJ_FUNDO'] == cnpj
+    fundo_espec = df.loc[filt_cnpj]
+
+    # Opções - posições titulares
+    filt_opcoes_compradas = (fundo_espec['TP_APLIC'] == 'Opções - Posições titulares')
+    # Selecionando em ordem da maior posição do fundo p/ a menor
+    df_opcoes_compradas = fundo_espec.loc[filt_opcoes_compradas].sort_values(by='DT_COMPTC', ascending=True)
+    # Calculando quantos porcentos representa cada ação
+    porcentagem_opcoes_compradas = lambda x: (x / df_opcoes_compradas['VL_MERC_POS_FINAL'].sum())
+    # Criando a coluna 'PORCENTAGEM'
+    df_opcoes_compradas['PORCENTAGEM'] = list(map(porcentagem_opcoes_compradas, df_opcoes_compradas['VL_MERC_POS_FINAL']))
+    # Selecionando apenas as colunas necessárias
+    df_opcoes_compradas = df_opcoes_compradas.loc[:,['DT_COMPTC', 'DENOM_SOCIAL', 'CD_ATIVO', 'PORCENTAGEM', 'VL_MERC_POS_FINAL', 'DT_INI_VIGENCIA', 'DT_FIM_VIGENCIA']]
+    # Renomeando a coluna 'DT_COMPTC' para 'data'
+    df_opcoes_compradas = df_opcoes_compradas.rename(columns={'DT_COMPTC' : 'data'})
+    # Selecionando a coluna 'data' como index
+    df_opcoes_compradas = df_opcoes_compradas.set_index('data')
+
+    # Opções - posições lançadas
+    filt_opcoes_vendidas = (fundo_espec['TP_APLIC'] == 'Opções - Posições lançadas')
+    # Selecionando em ordem da maior posição do fundo p/ a menor
+    df_opcoes_vendidas = fundo_espec.loc[filt_opcoes_vendidas].sort_values(by='DT_COMPTC', ascending=True)
+    # Calculando quantos porcentos representa cada ação
+    porcentagem_opcoes_compradas = lambda x: (x / df_opcoes_vendidas['VL_MERC_POS_FINAL'].sum())
+    # Criando a coluna 'PORCENTAGEM'
+    df_opcoes_vendidas['PORCENTAGEM'] = list(map(porcentagem_opcoes_compradas, df_opcoes_vendidas['VL_MERC_POS_FINAL']))
+    # Selecionando apenas as colunas necessárias
+    df_opcoes_vendidas = df_opcoes_vendidas.loc[:,['DT_COMPTC', 'DENOM_SOCIAL', 'CD_ATIVO', 'PORCENTAGEM', 'VL_MERC_POS_FINAL', 'DT_INI_VIGENCIA', 'DT_FIM_VIGENCIA']]
+    # Renomeando a coluna 'DT_COMPTC' para 'data'
+    df_opcoes_vendidas = df_opcoes_vendidas.rename(columns={'DT_COMPTC' : 'data'})
+    # Selecionando a coluna 'data' como index
+    df_opcoes_vendidas = df_opcoes_vendidas.set_index('data')
+
+    return df_opcoes_compradas, df_opcoes_vendidas
 
 
 def comparar_portfolios(df: pd.DataFrame, nome_fundo: str) -> str:
