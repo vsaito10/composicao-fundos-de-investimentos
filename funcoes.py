@@ -962,11 +962,11 @@ def fii_cnpj(df: pd.DataFrame, cnpj: str, ticker: str) -> pd.DataFrame:
     # Se o 'ultimo_mes' for diferente de 12, adicionar somar 1 no 'ultimo_mes'
     if ultimo_mes != 12:
         # Fazendo o download dos preço do FII
-        fii_preco = yf.download(ticker, start=f'{primeiro_ano}-{primeiro_mes}-01', end=f'{ultimo_ano}-{ultimo_mes+1}-01', auto_adjust=True)['Close']
+        fii_preco = yf.download(ticker, start=f'{primeiro_ano}-{primeiro_mes}-01', end=f'{ultimo_ano}-{ultimo_mes+1}-31', auto_adjust=True)['Close']
 
     else: 
         # Fazendo o download dos preço do FII
-        fii_preco = yf.download(ticker, start=f'{primeiro_ano}-{primeiro_mes}-01', end=f'{ultimo_ano}-{ultimo_mes}-01', auto_adjust=True)['Close']
+        fii_preco = yf.download(ticker, start=f'{primeiro_ano}-{primeiro_mes}-01', end=f'{ultimo_ano}-{ultimo_mes}-31', auto_adjust=True)['Close']
 
     # Resetando o index do df
     fii_preco = fii_preco.reset_index()
