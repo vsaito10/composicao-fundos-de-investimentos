@@ -1,6 +1,7 @@
 from datetime import datetime
 from functools import reduce
 from plotly.subplots import make_subplots
+import calendar
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -958,15 +959,21 @@ def fii_cnpj(df: pd.DataFrame, cnpj: str, ticker: str) -> pd.DataFrame:
     ultimo_ano = df.index[-1].year
     # Último mês
     ultimo_mes = df.index[-1].month
+    # Próximo mês
+    proximo_mes = ultimo_mes + 1
+    # Último dia do próximo mês (dinâmico)
+    ultimo_dia_proximo_mes = calendar.monthrange(ultimo_ano, proximo_mes)[1]
+    # Último dia do último mês (dinâmico)
+    ultimo_dia_ultimo_mes = calendar.monthrange(ultimo_ano, ultimo_mes)[1]
 
     # Se o 'ultimo_mes' for diferente de 12, adicionar somar 1 no 'ultimo_mes'
     if ultimo_mes != 12:
         # Fazendo o download dos preço do FII
-        fii_preco = yf.download(ticker, start=f'{primeiro_ano}-{primeiro_mes}-01', end=f'{ultimo_ano}-{ultimo_mes+1}-31', auto_adjust=True)['Close']
+        fii_preco = yf.download(ticker, start=f'{primeiro_ano}-{primeiro_mes}-01', end=f'{ultimo_ano}-{proximo_mes}-{ultimo_dia_proximo_mes}', auto_adjust=True)['Close']
 
     else: 
         # Fazendo o download dos preço do FII
-        fii_preco = yf.download(ticker, start=f'{primeiro_ano}-{primeiro_mes}-01', end=f'{ultimo_ano}-{ultimo_mes}-31', auto_adjust=True)['Close']
+        fii_preco = yf.download(ticker, start=f'{primeiro_ano}-{primeiro_mes}-01', end=f'{ultimo_ano}-{ultimo_mes}-{ultimo_dia_ultimo_mes}', auto_adjust=True)['Close']
 
     # Resetando o index do df
     fii_preco = fii_preco.reset_index()
