@@ -45,6 +45,16 @@ CLASSES = {
     'Obrigações por compra a termo a pagar': ('Valores a pagar', -1),
 }
 
+# Bloco 7 (exterior): o TP_ATIVO é inconsistente (muitas ações vêm como 'Outros'), então além dos tipos que
+# claramente não são ações, exclui os fundos, caixa e títulos encontrados nas carteiras dos 5 fundos
+TP_ATIVO_EXTERIOR_NAO_ACOES = ['Fundos Offshore', 'Opção de compra', 'Opção de venda', 'SWAP']
+ATIVOS_EXTERIOR_NAO_ACOES = {
+    'FUNDO OFF', 'SQ BIASE',                           # Squadra: fundo offshore
+    'IPPARTIN', 'IPPARTOF', 'USTI', 'USDXPCAS', '99',  # IP: fundos offshore e caixa
+    '82',                                              # Verde: VA Fund Ltd
+    'DYCMFUND', '12301398', '8587404', '10588488',     # Dynamo: fundo, Treasury Bill e bonds da B2W
+}
+
 
 def _lista_sql(valores) -> str:
     return "('" + "', '".join(valores) + "')"
@@ -101,6 +111,7 @@ def carregar_carteiras(cnpjs: list[str]) -> pd.DataFrame:
                    end as ativo,
                    coalesce(DS_ATIVO, DS_ATIVO_EXTERIOR, EMISSOR, NM_FUNDO_CLASSE_SUBCLASSE_COTA, NM_FUNDO_COTA, TP_TITPUB) as descricao,
                    DT_CONFID_APLIC is not null as confidencial,
+                   TP_ATIVO as tp_ativo,
                    VL_MERC_POS_FINAL as valor,
                    coalesce(VL_AQUIS_NEGOC, 0) as valor_compras,
                    coalesce(VL_VENDA_NEGOC, 0) as valor_vendas
@@ -124,7 +135,22 @@ def carregar_carteiras(cnpjs: list[str]) -> pd.DataFrame:
     df['classe'] = df['tp_aplic'].map(lambda x: CLASSES.get(x, ('Outros', 1))[0])
     df['valor'] = df['valor'] * df['tp_aplic'].map(lambda x: CLASSES.get(x, ('Outros', 1))[1])
     df['peso'] = df['valor'] / df['pl']
+    df['acao_exterior'] = (
+        df['classe'].eq('Exterior')
+        & ~df['tp_ativo'].isin(TP_ATIVO_EXTERIOR_NAO_ACOES)
+        & ~df['ativo'].isin(ATIVOS_EXTERIOR_NAO_ACOES)
+    )
     return df
+
+
+def nome_acao_exterior(df_carteira: pd.DataFrame) -> pd.Series:
+    """Identificador das ações no exterior. Quando o código é só um número (ex.: Verde usa '1' para várias ações),
+    usa a descrição sem a quantidade no final ('XP INC - CLASS A - 427' -> 'XP INC - CLASS A')."""
+    nome_descricao = (
+        df_carteira['descricao'].fillna('').str.replace(r'\s*-\s*\d+$', '', regex=True)
+        .str.replace(r'^[A-Z]+ US - ', '', regex=True).str.strip()
+    )
+    return df_carteira['ativo'].where(~df_carteira['ativo'].str.fullmatch(r'\d+'), nome_descricao)
 
 
 def posicoes_por_ativo(df_carteira: pd.DataFrame) -> pd.DataFrame:
@@ -133,7 +159,7 @@ def posicoes_por_ativo(df_carteira: pd.DataFrame) -> pd.DataFrame:
         df_carteira.groupby(['data', 'classe', 'ativo'], as_index=False)
         .agg(descricao=('descricao', 'first'), valor=('valor', 'sum'), peso=('peso', 'sum'),
              valor_compras=('valor_compras', 'sum'), valor_vendas=('valor_vendas', 'sum'),
-             confidencial=('confidencial', 'any'))
+             confidencial=('confidencial', 'any'), acao_exterior=('acao_exterior', 'any'))
     )
 
 
@@ -144,17 +170,25 @@ def retornos_mensais(serie: pd.Series) -> pd.Series:
 
 
 def tabela_rentabilidade(cota: pd.Series, benchmarks: pd.DataFrame) -> pd.DataFrame:
-    """Tabela ano x mês com a rentabilidade do fundo e o acumulado do ano do fundo, BOVA11 e CDI."""
-    ret = retornos_mensais(cota)
+    """Tabela ano x mês com a rentabilidade do fundo e o acumulado do ano do fundo, BOVA11 e CDI.
+
+    O primeiro mês conta a partir da primeira cota da série, para o acumulado fechar com o retorno do período.
+    """
+    def mensais_desde_inicio(serie: pd.Series) -> pd.Series:
+        fim_mes = serie.groupby(serie.index.to_period('M')).last()
+        return fim_mes / fim_mes.shift(1, fill_value=serie.iloc[0]) - 1
+
+    ret = mensais_desde_inicio(cota)
     tabela = pd.DataFrame({'ano': ret.index.year, 'mes': ret.index.month, 'ret': ret.values})
     tabela = tabela.pivot(index='ano', columns='mes', values='ret')
     meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
     tabela.columns = [meses[m - 1] for m in tabela.columns]
     tabela['Ano'] = (1 + ret).groupby(ret.index.year).prod() - 1
+    # Retorno composto desde o início do período até o último mês de cada ano
+    tabela['Acumulado'] = (1 + tabela['Ano']).cumprod() - 1
 
     for col in ['BOVA11', 'CDI']:
-        ret_bench = retornos_mensais(benchmarks[col].loc[cota.index.min():cota.index.max()])
-        ret_bench = ret_bench[ret_bench.index.isin(ret.index)]
+        ret_bench = mensais_desde_inicio(benchmarks[col].loc[cota.index.min():cota.index.max()].dropna())
         tabela[f'{col} no ano'] = (1 + ret_bench).groupby(ret_bench.index.year).prod() - 1
     return tabela
 
@@ -185,6 +219,7 @@ def metricas(cota: pd.Series, benchmarks: pd.DataFrame) -> dict:
         'Beta vs BOVA11': beta,
         'Correlação vs BOVA11': ret.corr(ret_bova),
         '% meses acima do CDI': (retornos_mensais(cota) > retornos_mensais(bench['CDI'])).mean(),
+        '% meses abaixo do CDI': (retornos_mensais(cota) < retornos_mensais(bench['CDI'])).mean(),
     }
 
 

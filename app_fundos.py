@@ -4,6 +4,8 @@ Interface Streamlit para analisar os fundos Verde, Dynamo, IP, Squadra e Guepard
 Para rodar:
     streamlit run app_fundos.py
 """
+from pathlib import Path
+
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -13,49 +15,53 @@ import dados_fundos as dados
 
 st.set_page_config(page_title='Fundos de Ações', page_icon='📊', layout='wide')
 
+# Cores pensadas para o fundo escuro (tema em .streamlit/config.toml)
 CORES = {
-    'Verde': '#2a9d8f', 'Dynamo': '#e76f51', 'IP': '#264653', 'Squadra': '#e9c46a', 'Guepardo': '#8e44ad',
-    'BOVA11': '#7f7f7f', 'CDI': '#bdbdbd',
+    'Verde': '#2a9d8f', 'Dynamo': '#e76f51', 'IP': '#4cc9f0', 'Squadra': '#e9c46a', 'Guepardo': '#b07cd8',
+    'BOVA11': '#9e9e9e', 'CDI': '#d0d0d0',
 }
 CNPJ_PARA_NOME = {cnpj: nome for nome, cnpj in dados.FUNDOS.items()}
+# O st.cache_data só percebe mudanças no corpo da função cacheada, não em dados_fundos.py. Passar a data de
+# modificação do arquivo como argumento invalida o cache quando ele muda (ex.: coluna nova nas carteiras).
+VERSAO_DADOS = Path(dados.__file__).stat().st_mtime
 
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Dados (cache)
 # ---------------------------------------------------------------------------------------------------------------------
 @st.cache_data(show_spinner='Lendo as cotas diárias...')
-def cotas() -> pd.DataFrame:
+def cotas(versao: float) -> pd.DataFrame:
     df = dados.carregar_cotas(list(dados.FUNDOS.values()))
     df['fundo'] = df['cnpj'].map(CNPJ_PARA_NOME)
     return df
 
 
 @st.cache_data(show_spinner='Lendo BOVA11 e CDI...')
-def benchmarks() -> pd.DataFrame:
+def benchmarks(versao: float) -> pd.DataFrame:
     return dados.carregar_benchmarks()
 
 
 @st.cache_data(show_spinner='Lendo as carteiras (CDA)...')
-def carteiras() -> pd.DataFrame:
+def carteiras(versao: float) -> pd.DataFrame:
     df = dados.carregar_carteiras(list(dados.FUNDOS.values()))
     df['fundo'] = df['cnpj'].map(CNPJ_PARA_NOME)
     return df
 
 
 @st.cache_data(show_spinner='Lendo as cotações das ações...')
-def retornos_diarios_acoes() -> pd.DataFrame:
-    return dados.carregar_retornos_diarios(dados.tickers_atribuicao(dados.posicoes_por_ativo(carteiras())))
+def retornos_diarios_acoes(versao: float) -> pd.DataFrame:
+    return dados.carregar_retornos_diarios(dados.tickers_atribuicao(dados.posicoes_por_ativo(carteiras(versao))))
 
 
 @st.cache_data(show_spinner='Calculando a atribuição...')
-def atribuicao(fundo: str):
-    df = carteiras()
+def atribuicao(fundo: str, versao: float):
+    df = carteiras(versao)
     pos = dados.posicoes_por_ativo(df[df['fundo'] == fundo])
-    return dados.atribuicao_mensal(pos, serie_cota(fundo), retornos_diarios_acoes(), benchmarks()['CDI'])
+    return dados.atribuicao_mensal(pos, serie_cota(fundo), retornos_diarios_acoes(versao), benchmarks(versao)['CDI'])
 
 
 def serie_cota(fundo: str) -> pd.Series:
-    df = cotas()
+    df = cotas(VERSAO_DADOS)
     return df[df['fundo'] == fundo].set_index('data')['cota'].dropna()
 
 
@@ -80,9 +86,9 @@ st.sidebar.title('Fundos de Ações')
 fundo = st.sidebar.radio('Fundo', list(dados.FUNDOS))
 st.sidebar.caption(f'CNPJ: {dados.FUNDOS[fundo]}')
 
-df_cotas = cotas()
-df_bench = benchmarks()
-df_carteiras = carteiras()
+df_cotas = cotas(VERSAO_DADOS)
+df_bench = benchmarks(VERSAO_DADOS)
+df_carteiras = carteiras(VERSAO_DADOS)
 
 data_min_cota, data_max_cota = df_cotas['data'].min().date(), df_cotas['data'].max().date()
 periodo = st.sidebar.date_input(
@@ -235,6 +241,7 @@ with aba_rent:
         cols[0].metric('Beta vs BOVA11', f"{m['Beta vs BOVA11']:.2f}")
         cols[1].metric('Correlação vs BOVA11', f"{m['Correlação vs BOVA11']:.2f}")
         cols[2].metric('% meses acima do CDI', fmt_pct(m['% meses acima do CDI']))
+        cols[3].metric('% meses abaixo do CDI', fmt_pct(m['% meses abaixo do CDI']))
 
         # Métricas contra o benchmark e risco de cauda
         mb = dados.metricas_benchmark(cota, df_bench)
@@ -327,10 +334,12 @@ with aba_rent:
         tabela = dados.tabela_rentabilidade(cota, df_bench)
         st.dataframe(
             tabela.style.format(fmt_pct).background_gradient(cmap='RdYlGn', vmin=-0.1, vmax=0.1,
-                                                             subset=[c for c in tabela.columns if 'no ano' not in c]),
+                                                             subset=[c for c in tabela.columns
+                                                                     if 'no ano' not in c and c != 'Acumulado']),
             width="stretch",
         )
-        st.caption('Mensal: última cota do mês vs. última cota do mês anterior. O primeiro mês do período é usado como base.')
+        st.caption('Mensal: última cota do mês vs. última cota do mês anterior. O primeiro mês conta a partir da data inicial do período. '
+                   '"Acumulado": retorno composto do fundo desde o início do período até o fim de cada ano.')
 
         # Captação líquida e PL
         fluxo = df_cotas[(df_cotas['fundo'] == fundo) & df_cotas['data'].between(inicio, fim)].set_index('data')
@@ -351,7 +360,7 @@ with aba_rent:
 # Atribuição de desempenho do fundo selecionado
 # ---------------------------------------------------------------------------------------------------------------------
 with aba_atrib:
-    df_resumo, df_detalhe = atribuicao(fundo)
+    df_resumo, df_detalhe = atribuicao(fundo, VERSAO_DADOS)
     meses_periodo = pd.period_range(inicio, fim, freq='M')
     df_resumo = df_resumo[df_resumo.index.isin(meses_periodo)]
     df_detalhe = df_detalhe[df_detalhe['mes'].isin(df_resumo.index)]
@@ -401,7 +410,7 @@ with aba_atrib:
         for grupo, cor in cores_grupos.items():
             fig.add_trace(go.Bar(x=x_meses, y=df_resumo[grupo], name=grupo, marker_color=cor))
         fig.add_trace(go.Scatter(x=x_meses, y=df_resumo['Retorno da cota'], name='Retorno da cota', mode='lines+markers',
-                                 line=dict(color='black')))
+                                 line=dict(color='#f5f5f5')))
         fig.update_layout(title='Decomposição do retorno mensal', barmode='relative', yaxis_tickformat='.1%',
                           hovermode='x unified', height=430, legend=dict(orientation='h', y=1.12))
         st.plotly_chart(fig, width="stretch")
@@ -525,10 +534,40 @@ with aba_carteira:
     st.plotly_chart(fig, width="stretch")
 
     hist_acoes = pos[pos['classe'] == 'Ações (comprado)'].groupby('data').agg(n_acoes=('ativo', 'nunique'))
-    fig = px.line(hist_acoes, title='Número de ações em carteira', height=300)
+    fig = px.line(hist_acoes, title='Número de ações em carteira', height=300, markers=True)
     fig.update_traces(line_color=CORES[fundo])
     fig.update_layout(showlegend=False, xaxis_title=None, yaxis_title=None)
     st.plotly_chart(fig, width="stretch")
+
+    # Ações vendidas: carteiras sem short entram com zero
+    hist_vendidas = (
+        pos[pos['classe'] == 'Ações (vendido)'].groupby('data')['ativo'].nunique()
+        .reindex(sorted(pos['data'].unique()), fill_value=0)
+    )
+    if hist_vendidas.sum() == 0:
+        st.info('O fundo não teve ações vendidas (short) em nenhuma carteira do CDA.')
+    else:
+        fig = px.line(hist_vendidas, title='Número de ações vendidas em carteira', height=300, markers=True)
+        fig.update_traces(line_color='#e76f51')
+        fig.update_layout(showlegend=False, xaxis_title=None, yaxis_title=None)
+        st.plotly_chart(fig, width="stretch")
+        st.caption('Ações vendidas = posições em "Obrigações por ações e outros TVM recebidos em empréstimo" (short).')
+
+    # Ações no exterior (bloco 7, sem fundos offshore, caixa, títulos e derivativos); carteiras sem ações entram com zero
+    acoes_exterior = carteira[carteira['acao_exterior']]
+    hist_exterior = (
+        dados.nome_acao_exterior(acoes_exterior).groupby(acoes_exterior['data']).nunique()
+        .reindex(sorted(pos['data'].unique()), fill_value=0)
+    )
+    if hist_exterior.sum() == 0:
+        st.info('O fundo não teve ações no exterior em nenhuma carteira do CDA (só fundos offshore, se houver).')
+    else:
+        fig = px.line(hist_exterior, title='Número de ações (exterior) em carteira', height=300, markers=True)
+        fig.update_traces(line_color=CORES['IP'])
+        fig.update_layout(showlegend=False, xaxis_title=None, yaxis_title=None)
+        st.plotly_chart(fig, width="stretch")
+        st.caption('Ativos de "Investimento no Exterior" exceto fundos offshore, caixa, títulos, opções e swaps. '
+                   'Ações detidas via fundo offshore (ex.: Squadra, Dynamo Cougar) não aparecem no CDA e ficam de fora.')
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Movimentações entre carteiras
